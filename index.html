@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<!-- Añadimos la clase 'dark' por defecto, el JS la gestionará -->
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Diagnóstico de Ingresos B2B</title>
+    
+    <!-- Importación de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Importación de Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Importación de Fuentes de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Configuración de Tipografías con Tailwind */
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        .font-sans {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Estilos base para Light/Dark mode */
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 100px; 
+        }
+
+        body {
+            /* Transición de color de fondo */
+            transition: background-color 0.3s ease, color 0.3s ease;
+            
+            /* Light Mode */
+            background-color: #f3f4f6; /* gray-100 */
+            color: #1f2937; /* gray-800 */
+            
+            /* Dark Mode */
+            @apply dark:bg-gray-900 dark:text-gray-300;
+            
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden; 
+        }
+
+        /* --- Efecto "Glassmorphism" (Light/Dark) --- */
+        .glass-widget {
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            
+            /* Light Mode */
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            
+            /* Dark Mode */
+            @apply dark:bg-gray-800/40 dark:border-white/10;
+            
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            @apply dark:shadow-transparent;
+        }
+
+        /* --- Gradientes de Fondo (más sutiles en light mode) --- */
+        .gradient-blur-1 {
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.1), transparent 70%);
+            @apply dark:background-[radial-gradient(circle,rgba(245,158,11,0.2),transparent_70%)]
+        }
+        .gradient-blur-2 {
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.08), transparent 70%);
+            @apply dark:background-[radial-gradient(circle,rgba(59,130,246,0.15),transparent_70%)]
+        }
+        
+        /* Ocultar gradientes en light mode si prefieres (descomentar) */
+        /* .dark .gradient-blur-1, .dark .gradient-blur-2 { display: block; }
+        .gradient-blur-1, .gradient-blur-2 { display: none; } */
+
+
+        /* --- Estilos Sliders (Light/Dark) --- */
+        input[type=range] {
+            background: rgba(0, 0, 0, 0.1);
+            @apply dark:bg-white/10;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            background: #F59E0B; /* amber-500 */
+            border: 4px solid #f3f4f6; /* gray-100 (light bg) */
+            @apply dark:border-gray-900;
+        }
+        input[type=range]::-moz-range-thumb {
+            background: #F59E0B;
+            border: 4px solid #f3f4f6;
+            @apply dark:border-gray-900;
+        }
+
+        /* --- Estilos Cuestionario (Light/Dark) --- */
+        .quiz-option {
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            @apply dark:border-white/20;
+            transition: all 0.2s ease-in-out;
+        }
+        .quiz-option:hover {
+            border-color: #F59E0B; /* amber-500 */
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        /* --- Estilos Modal (Light/Dark) --- */
+        .modal {
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .modal-content {
+            @apply bg-white dark:bg-gray-800 dark:border-gray-700;
+            transition: transform 0.25s ease;
+        }
+        
+        /* --- Tema Toggle Switch --- */
+        .theme-switch {
+            cursor: pointer;
+            width: 50px;
+            height: 26px;
+            background: #4b5563; /* gray-600 */
+            border-radius: 99px;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        .theme-switch-toggle {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        /* Iconos de sol/luna */
+        .theme-switch-sun, .theme-switch-moon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: #F59E0B; /* amber-500 */
+        }
+        .theme-switch-sun { left: 5px; opacity: 0; }
+        .theme-switch-moon { right: 5px; opacity: 1; }
+        
+        /* Estado "Light" (cuando 'dark' NO está) */
+        .dark .theme-switch {
+            background: #F59E0B; /* amber-500 */
+        }
+        .dark .theme-switch-toggle {
+            transform: translateX(24px);
+        }
+        .dark .theme-switch-sun { opacity: 1; }
+        .dark .theme-switch-moon { opacity: 0; }
+
+        /* --- Efecto Máquina de Escribir --- */
+        #typewriter-cursor {
+            border-right: 3px solid #F59E0B; /* amber-500 */
+            animation: blink 0.75s step-end infinite;
+        }
+        @keyframes blink {
+            from, to { border-color: transparent }
+            50% { border-color: #F59E0B; }
+        }
+
+    </style>
+</head>
+<body class="relative">
+
+    <!-- Contenedores de los gradientes de fondo -->
+    <div class="gradient-blur-1 fixed w-[500px] h-[500px] top-[5%] left-[-10%] z-0 pointer-events-none filter blur-[120px]"></div>
+    <div class="gradient-blur-2 fixed w-[400px] h-[400px] bottom-[10%] right-[-5%] z-0 pointer-events-none filter blur-[100px]"></div>
+
+    <!-- Contenedor principal del contenido -->
+    <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-24 z-10">
+
+        <!-- ===== NUEVO HEADER: Logo + Toggle ===== -->
+        <div class="absolute top-6 right-4 sm:right-6 lg:right-8 z-20 flex items-center gap-4">
+            <span class="font-serif text-lg font-bold text-gray-800 dark:text-white hidden sm:inline">
+                Roger apreeeen 😂😂😂
+            </span>
+            <!-- Theme Toggle -->
+            <div id="theme-toggle-btn" class="theme-switch" role="switch" aria-checked="true" title="Cambiar tema">
+                <div class="theme-switch-toggle"></div>
+                <!-- Icono Sol -->
+                <svg class="theme-switch-sun" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11ZM10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM10 13a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"></path></svg>
+                <!-- Icono Luna -->
+                <svg class="theme-switch-moon" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586Z"></path></svg>
+            </div>
+        </div>
+
+
+        <!-- ===== 1. HERO SECTION ===== -->
+        <header class="text-center pt-20 md:pt-32">
+            <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white leading-tight">
+                Su empresa tiene fugas de ingresos. 
+                <!-- Texto dinámico -->
+                <span id="typewriter" class="text-amber-500"></span><span id="typewriter-cursor"></span>
+            </h1>
+            <p class="mt-6 text-lg lg:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Use nuestras herramientas para diagnosticar sus pérdidas operativas y calcular su potencial de recuperación (ROI) en menos de 90 segundos.
+            </p>
+            <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#detector" class="btn-primary block w-full sm:w-auto px-8 py-4 rounded-lg font-semibold text-lg bg-amber-500 text-gray-900 hover:bg-amber-400 transition-all duration-300 shadow-lg shadow-amber-500/20">
+                    Iniciar Diagnóstico Gratuito
+                </a>
+                <a href="#calculadora" class="btn-secondary block w-full sm:w-auto px-8 py-4 rounded-lg font-semibold text-lg border-2 border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-gray-900 dark:hover:text-gray-900 transition-all duration-300">
+                    Calcular mi ROI
+                </a>
+            </div>
+        </header>
+
+        <!-- ===== 2. PRUEBA SOCIAL (Rediseñada) ===== -->
+        <section class="mt-20 text-center">
+            <p class="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase">Metodología validada por:</p>
+            <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6 items-center">
+                <!-- Logos rediseñados como DIVs clicables -->
+                <div class="client-logo chart-trigger bg-gray-200 dark:bg-gray-800 p-6 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer" data-chart-type="bar" data-client-name="Cliente A">
+                    <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Cliente A</span>
+                </div>
+                <div class="client-logo chart-trigger bg-gray-200 dark:bg-gray-800 p-6 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer" data-chart-type="line" data-client-name="Cliente B">
+                    <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Cliente B</span>
+                </div>
+                <div class="client-logo chart-trigger bg-gray-200 dark:bg-gray-800 p-6 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer" data-chart-type="doughnut" data-client-name="Cliente C">
+                    <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Cliente C</span>
+                </div>
+                <div class="client-logo chart-trigger bg-gray-200 dark:bg-gray-800 p-6 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer" data-chart-type="bar" data-client-name="Cliente D">
+                    <span class="text-lg font-bold text-gray-700 dark:text-gray-300">Cliente D</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== 3. HERRAMIENTA 1: DETECTOR DE FUGAS ===== -->
+        <section id="detector" class="glass-widget mt-20 md:mt-32 p-6 md:p-10 rounded-3xl">
+            <h2 class="font-serif text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white text-center">
+                1. El Detector de Fugas
+            </h2>
+            <p class="text-center text-gray-600 dark:text-gray-300 text-lg mt-2 mb-8">Responda 3 preguntas rápidas para identificar sus puntos ciegos.</p>
+            
+            <div id="leak-detector-quiz" class="max-w-xl mx-auto">
+                <!-- Contenido JS -->
+            </div>
+        </section>
+
+        <!-- ===== 4. HERRAMIENTA 2: CALCULADORA DE ROI ===== -->
+        <section id="calculadora" class="glass-widget mt-16 md:mt-24 p-6 md:p-10 rounded-3xl">
+            <h2 class="font-serif text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white text-center">
+                2. La Calculadora de Retorno
+            </h2>
+            <p class="text-center text-gray-600 dark:text-gray-300 text-lg mt-2 mb-8">Mueva los sliders para ver su potencial de ahorro en tiempo real.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+                
+                <div class="space-y-8">
+                    <div>
+                        <label for="revenue-slider" class="flex justify-between font-semibold text-gray-800 dark:text-white mb-2">
+                            <span>Facturación Anual</span>
+                            <span id="revenue-value" class="text-amber-500">$5,000,000</span>
+                        </label>
+                        <input type="range" id="revenue-slider" min="1000000" max="50000000" value="5000000" step="1000000">
+                    </div>
+                    
+                    <div>
+                        <label for="employees-slider" class="flex justify-between font-semibold text-gray-800 dark:text-white mb-2">
+                            <span>Nº de Empleados</span>
+                            <span id="employees-value" class="text-amber-500">250</span>
+                        </label>
+                        <input type="range" id="employees-slider" min="50" max="2000" value="250" step="50">
+                    </div>
+                </div>
+
+                <div class="text-center bg-gray-200 dark:bg-gray-900 p-8 rounded-2xl">
+                    <span class="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase">Potencial de Ahorro Anual</span>
+                    <div id="roi-result" class="font-serif text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white my-3">
+                        $0
+                    </div>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">Estimación basada en nuestra metodología.</p>
+                    <button id="open-roi-modal-btn" class="w-full px-6 py-3 rounded-lg font-semibold bg-amber-500 text-gray-900 hover:bg-amber-400 transition-all duration-300">
+                        Obtener desglose detallado
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== 5. TESTIMONIOS DE AUTORIDAD ===== -->
+        <section id="testimonios" class="mt-16 md:mt-24">
+            <h3 class="font-serif text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white text-center mb-12">
+                Resultados, no promesas
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- Testimonio 1 (Clicable) -->
+                <div class="chart-trigger bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer" data-chart-type="line" data-client-name="Tech Solutions">
+                    <p class="text-lg text-gray-800 dark:text-white font-serif italic">
+                        "Identificamos un 12% de sobrecosto en procesos que creíamos optimizados. El informe de fugas fue el punto de partida para un ahorro de seis cifras."
+                    </p>
+                    <div class="flex items-center mt-6">
+                        <img src="https://placehold.co/50x50/FFFFFF/CCCCCC?text=User" alt="Foto de Perfil" class="w-12 h-12 rounded-full object-cover">
+                        <div class="ml-4">
+                            <div class="font-bold text-gray-900 dark:text-white">Ana Torres</div>
+                            <div class="text-sm text-amber-500 dark:text-amber-400">Directora de Operaciones, Tech Solutions</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Testimonio 2 (Clicable) -->
+                <div class="chart-trigger bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer" data-chart-type="bar" data-client-name="Logística Global">
+                    <p class="text-lg text-gray-800 dark:text-white font-serif italic">
+                        "La calculadora de ROI no mentía. Proyectamos un ahorro de 250k€ y, tras implementar su sistema, superamos los 310k€ en el primer año."
+                    </p>
+                    <div class="flex items-center mt-6">
+                        <img src="https://placehold.co/50x50/FFFFFF/CCCCCC?text=User" alt="Foto de Perfil" class="w-12 h-12 rounded-full object-cover">
+                        <div class="ml-4">
+                            <div class="font-bold text-gray-900 dark:text-white">Carlos Vega</div>
+                            <div class="text-sm text-amber-500 dark:text-amber-400">CFO, Logística Global</div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </section>
+
+    </div> <!-- Fin del contenedor principal -->
+
+    <!-- ===== MODAL: CAPTURA DE LEAD (Calculadora ROI) ===== -->
+    <div id="roi-modal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-filter backdrop-blur-sm opacity-0 invisible" aria-hidden="true">
+        <div class="modal-content relative w-full max-w-lg p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transform scale-95">
+            <button id="close-roi-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <h3 class="font-serif text-2xl font-bold text-gray-900 dark:text-white mb-2">Desglose Detallado del ROI</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-6">Ingrese su email de trabajo para recibir su informe personalizado en PDF.</p>
+            
+            <form id="roi-email-form">
+                <label for="roi-email" class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email de trabajo</label>
+                <input type="email" id="roi-email" name="email" required placeholder="nombre@suempresa.com" class="w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                <button type="submit" class="w-full mt-4 px-6 py-3 rounded-lg font-semibold bg-amber-500 text-gray-900 hover:bg-amber-400 transition-all duration-300">
+                    Enviar mi Informe PDF
+                </button>
+            </form>
+            <div id="roi-form-success" class="hidden text-center text-green-500 dark:text-green-400 mt-4 font-semibold">
+                ¡Informe enviado! Revise su bandeja de entrada.
+            </div>
+        </div>
+    </div>
+    
+    <!-- ===== NUEVO MODAL: GRÁFICOS ===== -->
+    <div id="chart-modal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-filter backdrop-blur-sm opacity-0 invisible" aria-hidden="true">
+        <div class="modal-content relative w-full max-w-2xl p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transform scale-95">
+            <button id="close-chart-modal-btn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <h3 id="chart-modal-title" class="font-serif text-2xl font-bold text-gray-900 dark:text-white mb-4">Resultados (Ejemplo)</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-6">Este es un gráfico de ejemplo que muestra los datos de mejora.</p>
+            
+            <div class="w-full h-64 md:h-80">
+                <canvas id="chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===== JavaScript Embebido ===== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- Lógica para Smooth Scroll ---
+            // (Sin cambios)
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+
+            // --- NUEVO: Lógica de Theme Toggle ---
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const htmlElement = document.documentElement;
+
+            // Cargar preferencia guardada
+            if (localStorage.getItem('theme') === 'dark' || 
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                htmlElement.classList.add('dark');
+                themeToggleBtn.setAttribute('aria-checked', 'true');
+            } else {
+                htmlElement.classList.remove('dark');
+                themeToggleBtn.setAttribute('aria-checked', 'false');
+            }
+
+            themeToggleBtn.addEventListener('click', () => {
+                if (htmlElement.classList.contains('dark')) {
+                    htmlElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                    themeToggleBtn.setAttribute('aria-checked', 'false');
+                } else {
+                    htmlElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                    themeToggleBtn.setAttribute('aria-checked', 'true');
+                }
+                // Actualizar gráficos si el modal está abierto
+                if (chartInstance) {
+                    chartInstance.destroy();
+                    generateChart(currentChartType, currentChartName);
+                }
+            });
+
+
+            // --- NUEVO: Lógica de Máquina de Escribir ---
+            const typewriterElement = document.getElementById('typewriter');
+            const phrases = [
+                "Nosotros las encontramos.",
+                "Diagnosticamos sus pérdidas.",
+                "Calculamos su potencial.",
+                "Le mostramos el ROI."
+            ];
+            let phraseIndex = 0;
+            let charIndex = 0;
+            let isDeleting = false;
+
+            function typeWriter() {
+                const currentPhrase = phrases[phraseIndex];
+                let text = '';
+
+                if (isDeleting) {
+                    text = currentPhrase.substring(0, charIndex - 1);
+                    charIndex--;
+                } else {
+                    text = currentPhrase.substring(0, charIndex + 1);
+                    charIndex++;
+                }
+
+                typewriterElement.textContent = text;
+
+                let typeSpeed = 100;
+                if (isDeleting) {
+                    typeSpeed /= 2; // Borrar más rápido
+                }
+
+                if (!isDeleting && charIndex === currentPhrase.length) {
+                    typeSpeed = 2000; // Pausa al final
+                    isDeleting = true;
+                } else if (isDeleting && charIndex === 0) {
+                    isDeleting = false;
+                    phraseIndex = (phraseIndex + 1) % phrases.length;
+                    typeSpeed = 500; // Pausa antes de empezar
+                }
+
+                setTimeout(typeWriter, typeSpeed);
+            }
+            // Iniciar máquina de escribir
+            typeWriter();
+
+
+            // --- Lógica para Herramienta 1: Detector de Fugas ---
+            const quizContainer = document.getElementById('leak-detector-quiz');
+            let currentQuestionIndex = 0;
+            const userAnswers = [];
+            const quizQuestions = [ /* ... (sin cambios) ... */ ];
+            
+            // (Definiciones de quizQuestions, renderQuizQuestion, renderLeakDetectorEmailForm sin cambios)
+            // ...
+            const quizQuestions_def = [
+                {
+                    question: "¿En qué área siente que su operación es menos eficiente?",
+                    options: ["Procesos Manuales", "Gestión de Proveedores", "Ciclo de Ventas", "Reportes y Análisis"]
+                },
+                {
+                    question: "¿Cuántas herramientas de software diferentes utiliza su equipo para tareas clave (sin contar email/chat)?",
+                    options: ["1-2 (Todo integrado)", "3-5 (Algunas conectadas)", "6-10 (Silos de datos)", "Más de 10 (Caos)"]
+                },
+                {
+                    question: "¿Con qué frecuencia descubre problemas de costos *después* de que hayan impactado el trimestre?",
+                    options: ["Nunca, lo vemos venir", "Ocasionalmente", "Frecuentemente", "Siempre vamos tarde"]
+                }
+            ];
+
+            function renderQuizQuestion() {
+                // Aplicar clases de light/dark mode dinámicamente
+                const textColor = document.documentElement.classList.contains('dark') ? 'text-white' : 'text-gray-900';
+                
+                if (currentQuestionIndex < quizQuestions_def.length) {
+                    const question = quizQuestions_def[currentQuestionIndex];
+                    quizContainer.innerHTML = `
+                        <h4 class="text-xl font-semibold ${textColor} mb-6 text-center">${question.question}</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            ${question.options.map((option, index) => `
+                                <button 
+                                    class="quiz-option p-4 rounded-lg text-left ${textColor} font-medium hover:text-amber-500 dark:hover:text-amber-400"
+                                    data-option="${option}"
+                                >
+                                    ${option}
+                                </button>
+                            `).join('')}
+                        </div>
+                        <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">Pregunta ${currentQuestionIndex + 1} de ${quizQuestions_def.length}</p>
+                    `;
+                } else {
+                    renderLeakDetectorEmailForm();
+                }
+            }
+
+            function renderLeakDetectorEmailForm() {
+                quizContainer.innerHTML = `
+                    <div class="text-center bg-gray-200 dark:bg-gray-900 p-8 rounded-2xl">
+                        <h4 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Diagnóstico Completo</h4>
+                        <p class="text-gray-600 dark:text-gray-300 mb-6">Hemos identificado sus principales áreas de fuga. Ingrese su email de trabajo para recibir su 'Informe de Fugas' personalizado.</p>
+                        <form id="leak-email-form" class="flex flex-col sm:flex-row gap-2">
+                            <input type="email" id="leak-email" required placeholder="nombre@suempresa.com" class="flex-grow px-4 py-3 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                            <button type="submit" class="px-6 py-3 rounded-lg font-semibold bg-amber-500 text-gray-900 hover:bg-amber-400 transition-all duration-300">
+                                Recibir Informe
+                            </button>
+                        </form>
+                        <div id="leak-form-success" class="hidden text-center text-green-500 dark:text-green-400 mt-4 font-semibold">
+                            ¡Informe en camino! Revise su email.
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('leak-email-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    console.log('Enviando informe de fugas a:', document.getElementById('leak-email').value);
+                    console.log('Respuestas:', userAnswers);
+                    document.getElementById('leak-form-success').classList.remove('hidden');
+                    document.getElementById('leak-email-form').classList.add('hidden');
+                });
+            }
+
+            quizContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('quiz-option')) {
+                    userAnswers.push(e.target.dataset.option);
+                    currentQuestionIndex++;
+                    renderQuizQuestion();
+                }
+            });
+            renderQuizQuestion();
+
+
+            // --- Lógica para Herramienta 2: Calculadora de ROI ---
+            // (Lógica de formatCurrency, formatNumber y calculateROI sin cambios)
+            // ...
+            const revenueSlider = document.getElementById('revenue-slider');
+            const employeesSlider = document.getElementById('employees-slider');
+            const revenueValue = document.getElementById('revenue-value');
+            const employeesValue = document.getElementById('employees-value');
+            const roiResult = document.getElementById('roi-result');
+
+            function formatCurrency(value) {
+                return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+            }
+            function formatNumber(value) {
+                return new Intl.NumberFormat('es-ES').format(value);
+            }
+
+            function calculateROI() {
+                const revenue = parseInt(revenueSlider.value);
+                const employees = parseInt(employeesSlider.value);
+                const potentialSaving = (revenue * 0.015) + (employees * 350);
+
+                revenueValue.textContent = formatCurrency(revenue);
+                employeesValue.textContent = formatNumber(employees);
+
+                roiResult.classList.add('opacity-0', 'transform', '-translate-y-2');
+                setTimeout(() => {
+                    roiResult.textContent = formatCurrency(potentialSaving);
+                    roiResult.classList.remove('opacity-0', 'transform', '-translate-y-2');
+                    roiResult.classList.add('transition-all', 'duration-300');
+                }, 100);
+            }
+
+            revenueSlider.addEventListener('input', calculateROI);
+            employeesSlider.addEventListener('input', calculateROI);
+            calculateROI();
+
+
+            // --- Lógica para el Modal de ROI ---
+            // (Funciones open/close sin cambios, adaptadas para ID)
+            // ...
+            setupModal('roi-modal', 'open-roi-modal-btn', 'close-roi-modal-btn', 'roi-email-form', 'roi-form-success');
+
+
+            // --- NUEVO: Lógica para el Modal de Gráficos ---
+            let chartInstance = null;
+            let currentChartType = 'bar'; // Para redibujar al cambiar de tema
+            let currentChartName = 'Cliente';
+            const chartModal = document.getElementById('chart-modal');
+            const chartModalTitle = document.getElementById('chart-modal-title');
+            const chartTriggers = document.querySelectorAll('.chart-trigger');
+            const chartCanvas = document.getElementById('chart-canvas').getContext('2d');
+            
+            // Función genérica para configurar modales
+            function setupModal(modalId, openBtnId, closeBtnId, formId, successId) {
+                const modal = document.getElementById(modalId);
+                const openBtn = document.getElementById(openBtnId);
+                const closeBtn = document.getElementById(closeBtnId);
+                
+                const open = () => {
+                    modal.setAttribute('aria-hidden', 'false');
+                    modal.classList.remove('opacity-0', 'invisible');
+                    modal.querySelector('.modal-content').classList.remove('scale-95');
+                };
+                const close = () => {
+                    modal.setAttribute('aria-hidden', 'true');
+                    modal.classList.add('opacity-0', 'invisible');
+                    modal.querySelector('.modal-content').classList.add('scale-95');
+                    
+                    if(formId) {
+                        document.getElementById(formId).classList.remove('hidden');
+                        document.getElementById(successId).classList.add('hidden');
+                        document.getElementById(formId).reset();
+                    }
+                };
+
+                if (openBtn) openBtn.addEventListener('click', open);
+                closeBtn.addEventListener('click', close);
+                modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+                
+                if (formId) {
+                    document.getElementById(formId).addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        console.log('Enviando informe...', e.target);
+                        document.getElementById(formId).classList.add('hidden');
+                        document.getElementById(successId).classList.remove('hidden');
+                    });
+                }
+                
+                return { modal, open, close };
+            }
+
+            // Configurar modal de gráficos (sin botón de apertura obvio, se abre por triggers)
+            const { close: closeChartModal } = setupModal('chart-modal', null, 'close-chart-modal-btn', null, null);
+
+            // Cerrar modal de gráfico con Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (chartModal.getAttribute('aria-hidden') === 'false') {
+                        closeChartModal();
+                    }
+                    // También cerrar el modal de ROI si está abierto
+                    if (document.getElementById('roi-modal').getAttribute('aria-hidden') === 'false') {
+                        document.getElementById('close-roi-modal-btn').click();
+                    }
+                }
+            });
+
+            // Función para generar gráficos
+            function generateChart(type, clientName) {
+                if (chartInstance) {
+                    chartInstance.destroy(); // Destruir gráfico anterior
+                }
+
+                currentChartType = type; // Guardar para cambio de tema
+                currentChartName = clientName;
+                chartModalTitle.textContent = `Resultados de ${clientName}`;
+
+                // Colores sensibles al modo Light/Dark
+                const isDarkMode = document.documentElement.classList.contains('dark');
+                const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                const labelColor = isDarkMode ? '#D1D5DB' : '#374151'; // gray-300 / gray-700
+                const legendColor = isDarkMode ? '#E5E7EB' : '#1F2937'; // gray-200 / gray-800
+
+                const labels = ['Q1', 'Q2', 'Q3', 'Q4'];
+                const data = labels.map(() => Math.floor(Math.random() * 100) + 20);
+                
+                let chartConfig;
+                const baseData = {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Mejora de Eficiencia (%)',
+                        data: data,
+                        borderColor: '#F59E0B',
+                        backgroundColor: type === 'doughnut' ? ['#F59E0B', '#FBBF24', '#FCD34D', '#FDE68A'] : 'rgba(245, 158, 11, 0.5)',
+                        borderWidth: 2,
+                        fill: type === 'line',
+                        tension: 0.3
+                    }]
+                };
+
+                const options = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            position: type === 'doughnut' ? 'top' : 'bottom',
+                            labels: { color: legendColor, font: { size: 14 } }
+                        }
+                    },
+                    scales: (type === 'bar' || type === 'line') ? {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: gridColor },
+                            ticks: { color: labelColor }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: labelColor }
+                        }
+                    } : {}
+                };
+
+                chartInstance = new Chart(chartCanvas, {
+                    type: type,
+                    data: baseData,
+                    options: options
+                });
+            }
+
+            // Añadir listeners a los triggers de gráficos
+            chartTriggers.forEach(trigger => {
+                trigger.addEventListener('click', () => {
+                    const type = trigger.dataset.chartType || 'bar';
+                    const name = trigger.dataset.clientName || 'Cliente';
+                    generateChart(type, name);
+                    // Abrir el modal
+                    const modal = document.getElementById('chart-modal');
+                    modal.setAttribute('aria-hidden', 'false');
+                    modal.classList.remove('opacity-0', 'invisible');
+                    modal.querySelector('.modal-content').classList.remove('scale-95');
+                });
+            });
+
+        });
+    </script>
+</body>
+</html>
+
